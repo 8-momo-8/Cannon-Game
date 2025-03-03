@@ -1,0 +1,21 @@
+<CanonGame>:
+    canvas.before:
+        Color:
+            rgba: 0.06, 0.06, 0.08, 1  # Dark background matching main.py
+        Rectangle:
+            pos: self.pos
+            size: self.size
+            
+    canvas.after:
+        Color:
+            rgba: 0.2, 0.8, 1, 0.15  # Subtle neon blue grid
+        # Vertical lines
+        Line:
+            points: [j for x in range(51) for j in [self.width/50 * x, 0, self.width/50 * x, self.height]]
+            width: 1
+        # Horizontal lines    
+        Line:
+            points: [j for y in range(51) for j in [0, self.height/50 * y, self.width, self.height/50 * y]]
+            width: 1
+
+
