@@ -1,4 +1,4 @@
-# Cann
+# Cannon
 on Shooter Game
 A modern 2D shooting game built with Python and Kivy framework. Defend your position by shooting incoming balls with your cannon, collect power-ups, and achieve the highest score!
 
