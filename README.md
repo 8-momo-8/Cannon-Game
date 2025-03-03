@@ -33,12 +33,7 @@ python main.py
 | Control          | Action                        |
 |------------------|-------------------------------|
 | Mouse Movement   | Aim cannon                    |
-| Left Click       | Fire weapon                   |
-| Right Click      | Switch between bullet/missile |
-| A/D Keys         | Move cannon left/right        |
-| Left/Right Arrow | Fine-tune aim                 |
-| Spacebar         | Fire weapon                   |
-| P                | Pause game                    |
+### see the Help for More
 
 ### Gameplay
 
