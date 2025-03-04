@@ -1,27 +1,27 @@
-import random
-import math
-from math import cos, sin, radians, atan2, degrees
+# Standard library imports
 import json
-from kivy.config import Config
-from kivy.core.audio import SoundLoader
-from kivy.properties import NumericProperty, ListProperty
+import math
+import random
+from math import atan2, cos, degrees, radians, sin
+
+# Kivy imports
 from kivy.app import App
 from kivy.clock import Clock
+from kivy.config import Config
+from kivy.core.audio import SoundLoader
 from kivy.core.window import Window
+from kivy.graphics import Color, Ellipse, Line, Rectangle, RoundedRectangle
 from kivy.uix.button import Button
-from kivy.graphics import Color, Ellipse, Rectangle, Line, RoundedRectangle
-from kivy.animation import Animation
 from kivy.uix.label import Label
 from kivy.uix.widget import Widget
 
 # Game Constants
 WINDOW_WIDTH = 900
 WINDOW_HEIGHT = 700  # Adjusted height for better UI placement
-INITIAL_LIVES = 3
 BULLET_SPEED = 60  # Increased bullet speed
 MISSILE_SPEED = 30
 GRAVITY = 1
-POWER_UP_CHANCE = 0.005  # Reduced from 0.01 for better balance
+POWER_UP_CHANCE = 0.01  # Reduced from 0.01 for better balance
 
 Config.set('graphics', 'width', str(WINDOW_WIDTH))
 Config.set('graphics', 'height', str(WINDOW_HEIGHT))
@@ -39,39 +39,54 @@ COLORS = {
 }
 
 class GameObject:
-    def __init__(self, pos, size, color):
+    """Base class for all game objects with position, size and visual representation"""
+    def __init__(self, pos: tuple[float, float], size: tuple[float, float], color: list[float]):
+        """
+        Initialize a game object
+        Args:
+            pos: (x, y) position tuple
+            size: (width, height) size tuple
+            color: [r, g, b, a] color list
+        """
         self.pos = list(pos)
         self.size = size
         self.color = color
         self.shape = None
 
-class Ball(GameObject):
-    def __init__(self, pos):
-        super().__init__(pos, (40, 40), [random.uniform(0.5, 1), random.uniform(0.5, 1), random.uniform(0.5, 1), 1])
-        self.speed = random.uniform(0.2, 0.4)
-        self.direction = random.choice([-1, 1])
 
 class PowerUp(GameObject):
-
-
-    def __init__(self, pos, type):
+    """Power-up object that provides special abilities when collected"""
+    def __init__(self, pos: tuple[float, float], power_type: str):
+        """
+        Initialize a power-up
+        Args:
+            pos: (x, y) position tuple
+            power_type: Type of power-up (speed, shield, double_score)
+        """
         color = {
             'speed': COLORS['success'],
             'shield': [0, 1, 1, 1],
             'double_score': COLORS['warning']
-        }.get(type, COLORS['primary'])
+        }.get(power_type, COLORS['primary'])
         super().__init__(pos, (30, 30), color)
-        self.type = type
+        self.type = power_type
         self.active = True
 
 class Particle(GameObject):
-    def __init__(self, pos, color):
+    """Particle effect for explosions and visual effects"""
+    def __init__(self, pos: tuple[float, float], color: list[float]):
+        """
+        Initialize a particle
+        Args:
+            pos: (x, y) position tuple
+            color: [r, g, b, a] color list
+        """
         super().__init__(pos, (5, 5), color)
-        self.life = 1.0
-        self.velocity = [random.uniform(-2, 2), random.uniform(-2, 2)]
+        self.life: float = 1.0  # Time until particle disappears
+        self.velocity: list[float] = [random.uniform(-2, 2), random.uniform(-2, 2)]  # Movement direction and speed
 
 
-class CanonGame(Widget):
+class CannonGame(Widget):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.setup_game_state()
@@ -105,7 +120,7 @@ class CanonGame(Widget):
         
         # Game Title
         self.title_label = Label(
-            text="CANON SHOOTER",
+            text="CANNON SHOOTER",
             pos=(Window.width / 2 - 150, Window.height - 100),
             font_size=48,
             color=COLORS['primary'],
@@ -261,7 +276,6 @@ class CanonGame(Widget):
         # Game state
         self.score = 0
         self.level = 1
-        self.lives = INITIAL_LIVES
         self.game_over = False
         self.combo = 0
         self.combo_timer = None
@@ -291,12 +305,10 @@ class CanonGame(Widget):
         self.score_multiplier = 1
         self.bullet_speed_boost = 1
         self.auto_aim = False
-        self.has_rapid_fire = False
-        self.rapid_fire_timer = None
         
         # Game objects
-        self.Balls_list = []
-        self.Blocks_list = []  # Restore blocks list
+        self.balls_list = []
+        self.blocks_list = []  # Restore blocks list
         
         try:
 
@@ -376,7 +388,7 @@ class CanonGame(Widget):
             # Update help text position
             self.help_label.pos = (200, Window.height / 2 - 300)  # Moved right and centered vertically
             
-            self.help_label.text = """🎮 CANON SHOOTER - GAME GUIDE 🎮
+            self.help_label.text = """🎮 Cannon SHOOTER - GAME GUIDE 🎮
 
 [[ GAME CONTROLS ]]
 • Mouse Controls:
@@ -430,7 +442,7 @@ Practice aim prediction | Keep track of your shield timer
 
 
     def move_right(self):
-        target_x = self.x + 10
+        target_x = self.x + 30
         if Window.width / 2 + target_x < Window.width - 50:  # Boundary check
             self.x = target_x
             # Direct position updates without animation
@@ -440,9 +452,11 @@ Practice aim prediction | Keep track of your shield timer
                 self.bullet.pos = (self.cannon.pos[0] + 5, 70)
             if self.missile_state == 'ready':
                 self.missile.pos = (self.cannon.pos[0] + 5, 70)
+            if hasattr(self, 'shield_visual'):
+                self.shield_visual.pos = (self.cannon.pos[0] - 15, self.cannon.pos[1] - 15)
 
     def move_left(self):
-        target_x = self.x - 10
+        target_x = self.x - 30
         if Window.width / 2 + target_x > 0:  # Boundary check
             self.x = target_x
             # Direct position updates without animation
@@ -520,23 +534,33 @@ Practice aim prediction | Keep track of your shield timer
         self.power_up_status.color = (1, 1, 0, 1) if status else (0.9, 0.9, 1, 1)
 
     def apply_power_up(self, power_up):
+        # Calculate duration based on level using logarithmic scaling
+        base_durations = {
+            'speed': 10,
+            'shield': 15, 
+            'double_score': 20
+        }
+        duration = base_durations[power_up.type] * (1 + math.log2(self.level))
+        
         if power_up.type == 'speed':
             self.bullet_speed_boost = 2
-            self.bullet_speed = BULLET_SPEED * 2  # Directly multiply base speed
-            Clock.schedule_once(lambda dt: self.reset_power_up('speed'), 10)
+            self.bullet_speed = BULLET_SPEED * 2
+            Clock.schedule_once(lambda dt: self.reset_power_up('speed'), duration)
         elif power_up.type == 'shield':
+            if hasattr(self, 'shield_visual'):
+                self.canvas.remove(self.shield_visual)
+                delattr(self, 'shield_visual')
+                
             self.has_shield = True
-            # Add visual feedback for shield
             with self.canvas:
-                Color(0, 1, 1, 0.3)  # Cyan color with transparency
+                Color(0, 1, 1, 0.3)
                 self.shield_visual = Ellipse(
                     pos=(self.cannon.pos[0] - 15, self.cannon.pos[1] - 15),
-                    size=(80, 80)  # Larger shield size for better visibility
-                )
-            Clock.schedule_once(lambda dt: self.reset_power_up('shield'), 15)
+                    size=(80, 80))
+            Clock.schedule_once(lambda dt: self.reset_power_up('shield'), duration)
         elif power_up.type == 'double_score':
             self.score_multiplier = 2
-            Clock.schedule_once(lambda dt: self.reset_power_up('double_score'), 20)
+            Clock.schedule_once(lambda dt: self.reset_power_up('double_score'), duration)
         
         self.create_explosion(power_up.pos, power_up.color)
         self.update_power_up_status()
@@ -581,18 +605,6 @@ Practice aim prediction | Keep track of your shield timer
 
     def on_mouse_up(self, window, x, y, button, modifiers):
         pass
-
-    def reset_auto_aim(self, dt):
-        self.auto_aim = False
-
-    def reset_rapid_fire(self, dt):
-        self.has_rapid_fire = False
-        if self.rapid_fire_timer:
-            self.rapid_fire_timer.cancel()
-
-    def auto_shoot(self, dt):
-        if self.has_rapid_fire:
-            self.shoot()
 
     def spawn_power_up(self):
         if random.random() < 0.01:  # 1% chance each frame
@@ -677,11 +689,15 @@ Practice aim prediction | Keep track of your shield timer
 
 
     def spawn_enemies(self):
-        # Spawn balls with more gradual difficulty increase
-        max_balls = 3 + (self.level // 2)  # Slower increase in max balls (every 2 levels)
+        # Initial values with diminishing returns per level
+        initial_balls = 5  # Increased from 3
+        initial_speed = 0.3  # Increased from 0.2
+        
+        # Diminishing returns formula: base + (level * increment) / (1 + level * decay)
+        max_balls = initial_balls + (self.level * 1.0) / (1 + self.level * 0.1)
         spawn_chance = 0.01 + (self.level * 0.002)  # Reduced spawn rate increase per level
         
-        if len(self.Balls_list) < max_balls and random.random() < spawn_chance:
+        if len(self.balls_list) < max_balls and random.random() < spawn_chance:
             pos = (random.randint(100, Window.width - 100), Window.height)
             with self.canvas:
                 # Balls get more vibrant colors at higher levels
@@ -697,7 +713,7 @@ Practice aim prediction | Keep track of your shield timer
                     size=(40, 40),
                     radius=[20,]
                 )
-            self.Balls_list.append(ball)
+            self.balls_list.append(ball)
 
 
 
@@ -908,10 +924,16 @@ Press Restart to Play Again'''
         if self.grace_period:
             return
             
-        for ball in self.Balls_list[:]:
+        for ball in self.balls_list[:]:
             try:
-                # Base speed increases with level
-                base_speed = 0.2 + (0.01 * self.level)
+                # Initial speed with diminishing returns
+                initial_speed = 0.3  # Increased from 0.2
+                speed_increment = 0.02  # Reduced from 0.01
+                speed_decay = 0.05
+                
+                # Diminishing returns formula for speed
+                base_speed = initial_speed + (self.level * speed_increment) / (1 + self.level * speed_decay)
+                
                 # More complex movement patterns at higher levels
                 movement_intensity = 1 + (self.level * 0.1)
                 
@@ -938,7 +960,7 @@ Press Restart to Play Again'''
                 self.remove_ball(ball)
                     
         # Update blocks with improved movement
-        for block in self.Blocks_list[:]:  # Use slice copy for safe iteration
+        for block in self.blocks_list[:]:  # Use slice copy for safe iteration
             try:
                 # Update the block's position
                 current_x, current_y = block.pos
@@ -966,7 +988,7 @@ Press Restart to Play Again'''
 
         # Check bullet collisions
         if self.bullet_state == 'fire':
-            for ball in self.Balls_list[:]:
+            for ball in self.balls_list[:]:
                 if self.check_collision(self.bullet, ball):
                     self.handle_ball_hit(ball)
                     self.reset_bullet()
@@ -974,24 +996,19 @@ Press Restart to Play Again'''
 
         # Check missile collisions
         if self.missile_state == 'fire':
-            targets_hit = len(self.Balls_list)
+            targets_hit = len(self.balls_list)
             if targets_hit > 0:
                 base_points = 3 // targets_hit
                 extra_points = 3 % targets_hit
                 explosion_pos = self.missile.pos
                 self.create_explosion(explosion_pos, COLORS['warning'])
                 remaining_extra = extra_points
-                for ball in self.Balls_list[:]:
+                for ball in self.balls_list[:]:
                     points = base_points + (1 if remaining_extra > 0 else 0)
                     remaining_extra -= 1
                     self.handle_ball_hit(ball, is_missile=True, points=points)
                     self.create_explosion(ball.pos, [0.5, 0.5, 1, 1])
                 self.reset_missile()
-
-
-
-
-
 
 
     def handle_ball_hit(self, ball, is_missile=False, points=None):
@@ -1032,9 +1049,9 @@ Press Restart to Play Again'''
 
 
     def remove_ball(self, ball):
-        if ball in self.Balls_list:
+        if ball in self.balls_list:
             self.canvas.remove(ball)
-            self.Balls_list.remove(ball)
+            self.balls_list.remove(ball)
 
     def reset_combo(self, dt):
 
@@ -1119,12 +1136,12 @@ Press Restart to Play Again'''
         self.particles.clear()
         
         # Clear other game objects
-        for ball in self.Balls_list[:]:
+        for ball in self.balls_list[:]:
             self.remove_ball(ball)
         for power_up in self.power_ups[:]:
             self.remove_power_up(power_up)
             
-        self.Balls_list.clear()
+        self.balls_list.clear()
         self.power_ups.clear()
         
     def _keyboard_closed(self):
@@ -1145,10 +1162,10 @@ Press Restart to Play Again'''
 
 
 
-class CanonApp(App):
+class CannonApp(App):
     def build(self):
-        return CanonGame()
+        return CannonGame()
 
 
 if __name__ == '__main__':
-    CanonApp().run()
+    CannonApp().run()
